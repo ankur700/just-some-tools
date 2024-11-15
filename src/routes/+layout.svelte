@@ -1,14 +1,12 @@
 <script>
-	import '../app.pcss';
-	import Header from '$lib/components/header.svelte';
+	import Content from '$lib/components/content.svelte';
 	import Footer from '$lib/components/footer.svelte';
 	import Nav from '$lib/components/nav.svelte';
-	import Content from '$lib/components/content.svelte';
+	import '../app.pcss';
 </script>
 
-<Header></Header>
+<Nav />
 <Content>
 	<slot />
 </Content>
-<Nav></Nav>
-<Footer></Footer>
+<Footer />

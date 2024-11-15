@@ -1,106 +1,117 @@
-export function clearContent(htmlElement, htmlElement2) {
-  htmlElement.value ? (htmlElement.value = '') : null;
-  htmlElement2.value ? (htmlElement2.value = '') : null;
-}
-export function copy(event, htmlElement) {
-  doCopying(htmlElement, event);
-}
-function doCopying(copyText, event) {
-  try {
-    if (copyText.value.length > 0) {
-      copyText.select();
-      copyText.setSelectionRange(0, 99999);
-      document.execCommand('copy');
-      event.target.classList.add('btn-success');
-      event.target.innerHTML = 'Copied &#10003;';
-      setTimeout(function () {
-        event.target.innerHTML = 'Copy';
-        event.target.classList.remove('btn-success');
-      }, 2000);
-    } else {
-      event.target.classList.add('btn-error');
-      event.target.innerHTML = 'Empty Text';
-      setTimeout(function () {
-        event.target.innerHTML = 'Copy';
-        event.target.classList.remove('btn-error');
-      }, 2000);
-    }
-  } catch (error) {
-    event.target.style.color = 'red';
-    event.target.innerHTML = 'Error Copying';
-    console.log(error);
-  }
-}
-
+/**
+ * Calculate the size of the image while constraining the proportions based on the given maximum width and height.
+ *
+ * @param {HTMLImageElement} img - the image dom element
+ * @param {Number} maxWidth - the maximum width for the image
+ * @param {Number} maxHeight - the maximum height for the image
+ * @return {Array<Number>} an array containing the calculated width and height
+ */
 export function calculateSize(img, maxWidth, maxHeight) {
-  let width = img.width;
-  let height = img.height;
+	let width = img.width;
+	let height = img.height;
 
-  // calculate the width and height, constraining the proportions
-  if (width > height) {
-    if (width > maxWidth) {
-      height = Math.round((height * maxWidth) / width);
-      width = maxWidth;
-    }
-  } else {
-    if (height > maxHeight) {
-      width = Math.round((width * maxHeight) / height);
-      height = maxHeight;
-    }
-  }
-  return [width, height];
+	// calculate the width and height, constraining the proportions
+	if (width > height) {
+		if (width > maxWidth) {
+			height = Math.round((height * maxWidth) / width);
+			width = maxWidth;
+		}
+	} else {
+		if (height > maxHeight) {
+			width = Math.round((width * maxHeight) / height);
+			height = maxHeight;
+		}
+	}
+	return [width, height];
 }
 
 // Utility functions for demo purpose
-
-export function displayInfo(file, htmlElement) {
-  try {
-    if (file.size) htmlElement.innerText = `Size: ${readableBytes(file.size)}`;
-  } catch (error) {
-    console.log(error);
-  }
+/**
+ * Take a file and Display the file size
+ *
+ * @param {Blob} blob get blob size
+ * @param {File} file get file size
+ * @param {Number } originalImageSize
+ * @param {Number } compressedImageSize
+ * @param {Number } compressionRatio
+ *
+ */
+export function displayInfo(file, blob, originalImageSize, compressedImageSize, compressionRatio) {
+	// return `Size: ${readableBytes(file.size)}`;
+	originalImageSize = file.size;
+	compressedImageSize = blob.size;
+	compressionRatio = Math.floor(file.size / blob.size);
 }
 
-function readableBytes(bytes) {
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  const exponent = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    sizes.length - 1
-  );
-  const approx = bytes / 1024 ** exponent;
-  const result =
-    exponent === 0
-      ? `${bytes} bytes`
-      : `${approx.toFixed(2)} ${sizes[exponent]}`;
+/**
+ *
+ * @param {number} bytes - file size in bytes
+ * @return {string} - file size in human readable format
+ */
 
-  return result;
+export function readableBytes(bytes) {
+	const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+	const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), sizes.length - 1);
+	const approx = bytes / 1024 ** exponent;
+	const result = exponent === 0 ? `${bytes} bytes` : `${approx.toFixed(2)} ${sizes[exponent]}`;
+
+	return result;
 }
 
-export function compressImage(width, height, quality, blobUrl, MIME_TYPE) {
-  const compressedImage = document.getElementById('compressedImage');
-  const size = document.getElementById('compressedSize');
-  const image = new Image();
-  image.src = blobUrl;
-  image.onerror = () => {
-    URL.revokeObjectURL(image.src);
-    alert('Failed to load and convert image');
-  };
-  image.onload = () => {
-    URL.revokeObjectURL(image.src);
-    const [newWidth, newHeight] = calculateSize(image, width, height);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = newWidth;
-    canvas.height = newHeight;
-    ctx.drawImage(image, 0, 0, newWidth, newHeight);
-    canvas.toBlob(
-      blob => {
-        // Handle the compressed image. es. upload or save in local state
-        displayInfo(blob, size);
-        compressedImage.setAttribute('src', URL.createObjectURL(blob));
-      },
-      MIME_TYPE,
-      quality
-    );
-  };
+/**
+ * @param {Number} MAX_WIDTH - width of the compressed image
+ * @param {Number} MAX_HEIGHT - height of the compressed image
+ * @param {Number} quality - quality to set for the image compression
+ * @param {File} file - uploaded image file
+ * @param {String} MIME_TYPE - Mime type of the compressed image
+ * @param {Number } originalImageSize
+ * @param {Number } compressedImageSize
+ * @param {Number } compressionRatio
+ * @param {string } filename
+ */
+export function compressImage(
+	MAX_WIDTH,
+	MAX_HEIGHT,
+	quality,
+	file,
+	MIME_TYPE,
+	originalImageSize,
+	compressedImageSize,
+	compressionRatio,
+	filename
+) {
+	const compressedImage = document.getElementById('compressedImage');
+	const blobURL = URL.createObjectURL(file);
+	const image = new Image();
+	image.src = blobURL;
+	image.onerror = () => {
+		URL.revokeObjectURL(image.src);
+		alert('Failed to load and convert image');
+	};
+
+	image.onload = function () {
+		// Calculate image size and Create canvas
+		const [newWidth, newHeight] = calculateSize(image, MAX_WIDTH, MAX_HEIGHT);
+		const canvas = document.createElement('canvas');
+		canvas.width = newWidth;
+		canvas.height = newHeight;
+		const ctx = canvas.getContext('2d');
+		ctx?.drawImage(image, 0, 0, newWidth, newHeight);
+		canvas.toBlob(
+			(blob) => {
+				// Handle the compressed image.
+				if (blob) {
+					displayInfo(file, blob, originalImageSize, compressedImageSize, compressionRatio);
+					const anchor = document.createElement('a');
+					anchor.download = filename; // optional, but you can give the file a name
+					anchor.href = URL.createObjectURL(blob);
+					compressedImage?.setAttribute('src', anchor.href);
+					anchor.click();
+					// URL.revokeObjectURL(anchor.href);
+				}
+			},
+			MIME_TYPE,
+			quality / 100
+		);
+	};
 }

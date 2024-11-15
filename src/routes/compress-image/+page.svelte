@@ -1,272 +1,138 @@
 <script lang="ts">
-  import {onMount} from 'svelte';
-  import {compressImage, displayInfo} from '$lib/utils/utils.js';
-  import Loading from '$lib/components/loading.svelte';
-  let blobUrl = '',
-    filename = '',
-    compressedImageSrc = '';
-  let MIME_TYPE = 'image/jpeg';
-  let width = 640,
-    height = 360,
-    quality = 80;
-  let originalWidth, originalHeight, selectedSize = 'Select Size';
-  $: setloading = false;
-  $: downloadLink = compressedImageSrc ? compressedImageSrc : null;
+	import { compressImage, readableBytes } from '$lib/utils/utils.js';
+	import { onMount } from 'svelte';
 
-  onMount(() => {
-    const originalSize = document.getElementById('originalSize');
-    const originalImage = document.getElementById('originalImage');
-    const compressedSize = document.getElementById('compressedSize');
+	let quality = 80;
+	let blobUrl = '';
+	let filename = '';
+	let MIME_TYPE = '';
+	let MAX_WIDTH = 640;
+	let MAX_HEIGHT = 360;
+	let selectedSize = 'Medium 1280x720';
+	let uploadedImageInput;
+	let uploadedImageFile: File;
+	$: originalImageSize = 6840000;
+	$: compressedImageSize = 312150;
+	$: compressionRatio = Math.floor(originalImageSize / compressedImageSize);
 
-    const image = new Image();
-    image.src = originalImage.getAttribute('src');
-    image.onload = () => {
-      URL.revokeObjectURL(image.src);
-      originalWidth = image.naturalWidth;
-      originalHeight = image.naturalHeight;
-    };
-    originalSize.innerText = `Size: 6.84MB`;
-    compressedSize.innerText = `Size: 312.13 KB`;
+	onMount(() => {
+		uploadedImageInput = document.getElementById('upload');
+	});
 
-  });
+	function handleSizeChange(e: Event) {
+		console.log(e.target);
+		selectedSize = e.target?.value;
+		switch (selectedSize) {
+			case 'Large 1920x1080':
+				MAX_WIDTH = 1920;
+				MAX_HEIGHT = 1080;
+				break;
+			case 'Medium 1280x720':
+				MAX_WIDTH = 1280;
+				MAX_HEIGHT = 720;
+				break;
+			case 'Small 640x360':
+				MAX_WIDTH = 640;
+				MAX_HEIGHT = 360;
+				break;
+			default:
+				MAX_WIDTH = 1280;
+				MAX_HEIGHT = 720;
+				break;
+		}
+	}
 
-  function handleSizeChange(e) {
-    selectedSize = e.target.value;
-    switch (selectedSize) {
-      case 'Large':
-        width = 1920;
-        height = 1080;
-        break;
-      case 'Medium':
-        width = 1280;
-        height = 720;
-        break;
-      case 'Small':
-        width = 640;
-        height = 360;
-        break;
-      default:
-        width = 640;
-        height = 360;
-        break;
-    }
-  }
+	function handleCompress() {
+		compressImage(
+			MAX_WIDTH,
+			MAX_HEIGHT,
+			quality,
+			uploadedImageFile,
+			MIME_TYPE,
+			originalImageSize,
+			compressedImageSize,
+			compressionRatio,
+			filename
+		);
+	}
 
-  function handleCompress() {
-    setloading = true;
-    compressImage(width, height, quality, blobUrl, MIME_TYPE);
-    setTimeout(() => {
-      setloading = false;
-      compressedImageSrc = document.getElementById('compressedImage').getAttribute('src');
-    }, 1500);
-  }
-
-  function handleInput(e) {
-    const originalImage = document.getElementById('originalImage');
-    const originalSize = document.getElementById('originalSize');
-    const [file] = e.target.files;
-    const image = new Image();
-    MIME_TYPE = file.type;
-    filename = file.name;
-    filename = filename.replace('.', '_compressed.');
-    // storing the original image
-    blobUrl = URL.createObjectURL(file);
-    image.src = blobUrl;
-
-    image.onload = () => {
-      URL.revokeObjectURL(image.src);
-      originalWidth = image.naturalWidth;
-      originalHeight = image.naturalHeight;
-    }
-    displayInfo(file, originalSize);
-    originalImage.setAttribute('src', blobUrl);
-    compressedImageSrc = '';
-  }
+	function handleInput(e: Event) {
+		const originalImage = document.getElementById('originalImage');
+		const [file] = e.target?.files;
+		uploadedImageFile = file;
+		blobUrl = URL.createObjectURL(file);
+		// storing the original image
+		MIME_TYPE = file.type;
+		filename = file.name;
+		filename = filename.replace('.', '_compressed.');
+		originalImage?.setAttribute('src', blobUrl);
+	}
 </script>
 
 <svelte:head>
-  <title>Compress or Resize images</title>
+	<title>Compress or Resize images</title>
 </svelte:head>
 
-<h1 class="text-3xl font-bold mb-10 text-center">
-  Resizing and compressing images using javascript
-</h1>
-<div class="flex flex-col gap-10 align-center">
-  <div class="grid grid-cols-2 gap-6">
-    <div class=" flex flex-col gap-4">
-      <figure
-        class="rounded-lg w-full backdrop-blur bg-opacity-80 shadow-xl bg-base-100"
-      >
-        <img
-          id="originalImage"
-          src="/images/demo.jpg"
-          alt="raw"
-          class=" rounded-lg w-full align-middle border-none"
-          crossorigin="anonymous"
-        />
-      </figure>
-      <div class="flex flex-wrap justify-center mt-4 gap-4">
-        <span class="badge p-3 badge-lg badge-primary font-semibold">
-          Original </span
-        >
-        <span class="badge p-3 badge-lg badge-neutral"
-          >Width: {(originalWidth || '0') + ' px'}</span
-        >
-        <span class="badge p-3 badge-lg badge-neutral"
-          >Height: {(originalHeight || '0') + ' px'}</span
-        >
-        <span class="badge p-3 badge-lg badge-neutral" id="originalSize"></span>
-      </div>
-    </div>
+<section>
+	<div id="container" class="relative mx-auto flex min-h-[50vh] w-full flex-col p-4 2xl:max-w-7xl">
+		<!-- Starts component -->
+		<div class="diff mx-auto aspect-[16/9] max-w-4xl">
+			<span class="badge badge-md absolute bottom-0 right-0 z-10 w-24 rounded-none bg-base-200 p-2"
+				>Orignal</span
+			>
+			<span class="badge badge-md absolute bottom-0 left-0 z-10 w-24 rounded-none bg-base-200 p-2"
+				>Compressed</span
+			>
+			<div class="diff-item-1">
+				<img id="originalImage" src="/images/demo.jpg" alt="Before compression" />
+			</div>
+			<div class="diff-item-2">
+				<img id="compressedImage" src="/images/compressed.jpeg" alt="After compression" />
+			</div>
+			<div class="diff-resizer"></div>
+		</div>
 
-    <div class=" flex flex-col gap-4 justify-center align-center">
-      {#if setloading}
-        <div
-          class="rounded-lg flex justify-center align-center h-full backdrop-blur bg-opacity-80 shadow-xl bg-base-100"
-        >
-          <Loading />
-        </div>{/if}
-      <figure
-        class={' rounded-lg w-full h-full backdrop-blur bg-opacity-80 shadow-xl bg-base-100' +
-          (setloading ? ' hidden' : '')}
-      >
-        <img
-          id="compressedImage"
-          src="/images/compressed.jpeg"
-          alt="compressed"
-          class="rounded-lg w-full align-middle border-none"
-          crossorigin="anonymous"
-        />
-      </figure>
-      <div class="flex flex-wrap mt-4 justify-center gap-4">
-        <span class="badge badge-lg p-3 badge-secondary font-semibold">
-          Processed
-        </span>
-        <span class="badge badge-lg p-3 badge-neutral"
-          >Width: {(width || '0') + ' px'}</span
-        >
-        <span class="badge badge-lg p-3 badge-neutral"
-          >Height: {(height || '0') + ' px'}</span
-        >
-        <span class="badge badge-lg p-3 badge-neutral" id="compressedSize"
-        ></span>
-      </div>
-    </div>
-  </div>
+		<span class="mx-auto p-2 text-sm"
+			>Original - {readableBytes(originalImageSize)} | Compressed - {readableBytes(
+				compressedImageSize
+			)} | compression ratio: {compressionRatio}:1</span
+		>
+	</div>
+	<div class="controls flex items-center justify-center gap-4">
+		<div class="flex flex-col">
+			<select
+				on:change={(e) => handleSizeChange(e)}
+				name="size"
+				id="size"
+				bind:value={selectedSize}
+				class="select select-bordered w-full max-w-[200px]"
+			>
+				<option>Large 1920x1080</option>
+				<option selected>Medium 1280x720</option>
+				<option>Small 640x360</option>
+			</select>
+		</div>
+		<div class=" ">
+			<label for="qualityRange">Quality: {quality}</label>
+			<input
+				type="range"
+				min="0"
+				max="100"
+				bind:value={quality}
+				name="qualityRange"
+				id="qualityRange"
+				class="range range-xs"
+				step="10"
+			/>
+		</div>
+		<input
+			id="upload"
+			type="file"
+			class=" file-input file-input-bordered w-full max-w-xs flex-1"
+			accept="image/.png, image/.jpg, image/.jpeg"
+			on:change={(e) => handleInput(e)}
+		/>
 
-  <div class="controls flex gap-8 items-center">
-    <div class="flex flex-col">
-      <select
-        on:change={e => handleSizeChange(e)}
-        name="size"
-        id="size"
-        bind:value={selectedSize}
-        class="select select-bordered w-full max-w-xs"
-      >
-        <option disabled selected>Select Size</option>
-        <option>Large</option>
-        <option>Medium</option>
-        <option>Small</option>
-      </select>
-      <div class="flex gap-4">
-        <label class="form-control w-full max-w-xs">
-          <div class="label">
-            <span class="label-text">Width</span>
-            <span class="label-text-alt">in px</span>
-          </div>
-          <input
-            type="text"
-            name="width"
-            value={width}
-            class="input input-bordered w-full max-w-xs"
-          />
-        </label>
-        <label class="form-control w-full max-w-xs">
-          <div class="label">
-            <span class="label-text">Height</span>
-            <span class="label-text-alt">in px</span>
-          </div>
-          <input
-            type="text"
-            name="height"
-            value={height}
-            class="input input-bordered w-full max-w-xs"
-          />
-        </label>
-      </div>
-    </div>
-
-    <div class="mx-auto flex-1 max-w-2xl">
-      <label for="qualityRange">Quality: {quality}</label>
-      <input
-        type="range"
-        min="0"
-        max="100"
-        bind:value={quality}
-        name="qualityRange"
-        id="qualityRange"
-        class="range range-xs"
-        step="10"
-      />
-      <div class="w-full flex justify-between text-xs px-2">
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-        <span>|</span>
-      </div>
-    </div>
-  </div>
-  <div class="w-full flex gap-10 lg:gap-20 justify-center">
-    <input
-      id="upload"
-      type="file"
-      class=" flex-1 file-input file-input-bordered w-full max-w-lg"
-      accept="image/*"
-      on:change={e => handleInput(e)}
-    />
-    <button
-      class="btn w-64"
-      id="uploadButton"
-      disabled={setloading}
-      on:click={() => handleCompress()}
-    >
-      {#if setloading}
-        <span class="loading loading-ring loading-lg"></span>
-      {:else}
-        Compress
-      {/if}
-    </button>
-    {#if downloadLink}
-      <a
-        id="download"
-        class="btn"
-        title="download"
-        aria-label="download"
-        href={downloadLink}
-        download={filename || 'compressed.' + MIME_TYPE}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-4 h-4"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-          />
-        </svg>
-      </a>
-    {/if}
-  </div>
-</div>
+		<button class="w-xs btn" id="uploadButton" on:click={() => handleCompress()}> Compress </button>
+	</div>
+</section>
